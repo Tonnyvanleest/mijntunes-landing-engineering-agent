@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import express from "express";
 import { getLandingStatus, getLandingRecentFailures } from "./github.js";
 import { createLandingJob, getLandingJob, runLandingJob } from "./jobs.js";
@@ -9,13 +10,25 @@ const port = Number(process.env.PORT || 3000);
 app.disable("x-powered-by");
 app.use(express.json({ limit: "1mb" }));
 
+function authorizedMcp(req) {
+  const expected = process.env.MCP_ACCESS_TOKEN;
+  if (!expected) return false;
+  const header = String(req.headers.authorization || "");
+  const supplied = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!supplied) return false;
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 app.get("/", (_req, res) => {
   res.json({
     service: "MijnTunes Landing Engineering Agent",
-    version: "0.3.0",
+    version: "0.3.1",
     status: "online",
     targetRepository: process.env.LANDING_GITHUB_REPOSITORY || "Tonnyvanleest/mijntunes-landing",
     mcpEndpoint: "/mcp",
+    mcpAuth: "bearer",
     capabilities: [
       "get_landing_status",
       "get_landing_recent_failures",
@@ -77,6 +90,10 @@ app.post("/api/landing/jobs/:id/run", async (req, res) => {
 });
 
 app.all("/mcp", async (req, res) => {
+  if (!authorizedMcp(req)) {
+    res.set("WWW-Authenticate", "Bearer");
+    return res.status(401).json({ error: "unauthorized" });
+  }
   try {
     await handleMcp(req, res);
   } catch (error) {
