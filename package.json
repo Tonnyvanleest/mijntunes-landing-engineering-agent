@@ -1,6 +1,6 @@
 {
   "name": "mijntunes-landing-engineering-agent",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Engineering agent runtime for the MijnTunes.nl landing site",
@@ -9,9 +9,11 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "check": "node --check src/index.js && node --check src/github.js"
+    "check": "node --check src/index.js && node --check src/github.js && node --check src/jobs.js && node --check src/mcp.js"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "express": "^4.21.2",
+    "zod": "^3.25.76"
   }
 }
