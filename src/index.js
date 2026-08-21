@@ -1,6 +1,7 @@
 import express from "express";
 import { getLandingStatus, getLandingRecentFailures } from "./github.js";
 import { createLandingJob, getLandingJob, runLandingJob } from "./jobs.js";
+import { handleMcp } from "./mcp.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -11,9 +12,10 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/", (_req, res) => {
   res.json({
     service: "MijnTunes Landing Engineering Agent",
-    version: "0.2.0",
+    version: "0.3.0",
     status: "online",
     targetRepository: process.env.LANDING_GITHUB_REPOSITORY || "Tonnyvanleest/mijntunes-landing",
+    mcpEndpoint: "/mcp",
     capabilities: [
       "get_landing_status",
       "get_landing_recent_failures",
@@ -71,6 +73,15 @@ app.post("/api/landing/jobs/:id/run", async (req, res) => {
     console.error("run_landing_job failed", error);
     const job = getLandingJob(req.params.id);
     res.status(job ? 502 : 404).json({ ok: false, capability: "run_landing_job", error: error.message, data: job });
+  }
+});
+
+app.all("/mcp", async (req, res) => {
+  try {
+    await handleMcp(req, res);
+  } catch (error) {
+    console.error("MCP request failed", error);
+    if (!res.headersSent) res.status(500).json({ error: "MCP request failed", detail: error.message });
   }
 });
 
